@@ -86,4 +86,22 @@
 
 运行完之后，提交`submit_task1.csv`，获得分数0.99384
 
-对于第二段代码生成的`submit_task2.csv`，结果存在一定问题，还需要进行相关debug
+~~对于第二段代码生成的`submit_task2.csv`，结果存在一定问题，还需要进行相关debug~~
+
+## 对baseline进行fine-tune
+
+将baseline下载到本地，对于Logistic回归模型进行替换，替换模型有：SVM（支持向量机）、随机森林模型，对baseline进行相关代码替换
+
+结果显示，在default参数的情况下，Logistic回归模型表现更好，Random Forest次之，SVM表现最差，因此这条选择不同分类器的优化路径行不通。
+
+仍然基于baseline，对LogisticRegression模型的超参数进行调参优化，使用交叉验证技术来找到最佳的参数组合，将得到的参数组合重新应用于baseline，得到的结果略微优于原结果
+
+
+
+> To be continued
+
+## 更新日志
+
+2023年7月21日：跑通了baseline
+
+2023年7月22日：对baseline进行了fine-tune，实际结果略微优于baseline；尝试使用BERT模型，但是从运行中输出的部分参数来看，结果不尽如人意，同时显存爆了，建议上云
