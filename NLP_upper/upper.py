@@ -10,11 +10,18 @@ from transformers import AutoTokenizer
 from transformers import BertModel
 from pathlib import Path
 
+# 引入分词器
+from nltk import word_tokenize, ngrams
+
+from nltk.corpus import stopwords
+
+
+
 batch_size = 10
 # 文本的最大长度
 text_max_length = 128
 # 总训练的epochs数，我只是随便定义了个数
-epochs = 100
+epochs = 10
 # 学习率
 lr = 3e-5
 # 取多少训练集的数据作为验证集
@@ -41,7 +48,7 @@ pd_train_data = pd.read_csv('train.csv')
 pd_train_data['title'] = pd_train_data['title'].fillna('')
 pd_train_data['abstract'] = pd_train_data['abstract'].fillna('')
 
-test_data = pd.read_csv('test.csv')
+test_data = pd.read_csv('testB.csv')
 test_data['title'] = test_data['title'].fillna('')
 test_data['abstract'] = test_data['abstract'].fillna('')
 pd_train_data['text'] = pd_train_data['title'].fillna('') + ' ' + pd_train_data['author'].fillna('') + ' ' + \
@@ -255,4 +262,42 @@ for inputs, ids in test_loader:
 
 test_label = [pair[1] for pair in results]
 test_data['label'] = test_label
-test_data[['uuid', 'Keywords', 'label']].to_csv('submit_task1.csv', index=None)
+
+# 定义停用词，去掉出现较多，但对文章不关键的词语
+stops = set(stopwords.words())
+
+
+# 定义方法按照词频筛选关键词
+
+def extract_keywords_by_freq(title, abstract):
+    ngrams_count = list(ngrams(word_tokenize(title.lower()), 2)) + list(ngrams(word_tokenize(abstract.lower()), 2))
+    ngrams_count = pd.DataFrame(ngrams_count)
+    ngrams_count = ngrams_count[~ngrams_count[0].isin(stops)]
+    ngrams_count = ngrams_count[~ngrams_count[1].isin(stops)]
+    ngrams_count = ngrams_count[ngrams_count[0].apply(len) > 3]
+    ngrams_count = ngrams_count[ngrams_count[1].apply(len) > 3]
+    ngrams_count['phrase'] = ngrams_count[0] + ' ' + ngrams_count[1]
+    ngrams_count = ngrams_count['phrase'].value_counts()
+    ngrams_count = ngrams_count[ngrams_count > 1]
+    return list(ngrams_count.index)[:6]
+
+
+## 对测试集提取关键词
+
+test_words = []
+for row in test_data.iterrows():
+    # 读取第每一行数据的标题与摘要并提取关键词
+    prediction_keywords = extract_keywords_by_freq(row[1].title, row[1].abstract)
+    # 利用文章标题进一步提取关键词
+    prediction_keywords = [x.title() for x in prediction_keywords]
+    # 如果未能提取到关键词
+    if len(prediction_keywords) == 0:
+        prediction_keywords = ['A', 'B']
+    test_words.append('; '.join(prediction_keywords))
+
+test_data['Keywords'] = test_words
+test_data[['uuid', 'Keywords', 'label']].to_csv('submit_task2.csv', index=None)
+
+
+
+

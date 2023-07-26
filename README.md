@@ -8,12 +8,18 @@ This is my first NLP project,using python.
 
   According to the score given by the platform,**the fine-tuned Logistic Regression model**(AKA fine-tuned baseline) performs best up to now,reaching 0.99401.
 
-* `NLP_upper` is the upper project,using the BERT model from transformers. Regretfully, my local environment couldn't support the project(~~my poor GTX1650 12GB~~).
+  The official provides another dataset: `testB.csv` on 24th，July. The dataset remove the column `Keywords`. Thus, I update `baseline2` into `baseline3` to fix the dataset
 
-  SOLUTION: Run the project on Ali Cloud(not success yet)
+* `NLP_upper` is the upper project,using the BERT model from transformers to solve the classify-problem.
 
-  **However,this project has run for 26 epoches before I stopped the interpreter and the score was unsatisfactory.**
+  ~~Regretfully, my local environment couldn't support the project(my poor GTX1650 4GB).~~
 
+  SOLUTION: Run the project on Ali Cloud(not success yet)<---*It's still a good solution*
+
+  **However,this project has run for 26 epochs before I stopped the interpreter and the score was unsatisfactory.**<---*maybe overfitting*
   
+  Set the epoch=10,and the model works well,accuracy reaching 0.9850.
+  
+* `NLP_chatGLM` is the project using the LLM,leveraging chatGLM in the case of the stability of the connection. However,**using API may casuse the problem that the input including sensitive words stops the program**,emphasizing the essence of training the LLM locally.
 
 > To be continued...

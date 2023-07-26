@@ -15,20 +15,29 @@ from sklearn.exceptions import ConvergenceWarning
 from nltk import word_tokenize, ngrams
 simplefilter("ignore", category=ConvergenceWarning)
 
+from nltk.corpus import stopwords
+
+
+param_dist = {
+    'C': 2.8496190796154743,       # LogisticRegression的惩罚参数C在0.1~10之间均匀分布
+    'penalty': 'l2',     # 正则化类型：L1正则化或L2正则化
+    'max_iter': 3000  # 最大迭代次数
+}
+
 
 # 读取数据集
 train = pd.read_csv('train.csv')
 train['title'] = train['title'].fillna('')
 train['abstract'] = train['abstract'].fillna('')
 
-test = pd.read_csv('test.csv')
+test = pd.read_csv('testB.csv')
 test['title'] = test['title'].fillna('')
 test['abstract'] = test['abstract'].fillna('')
 
 
 # 提取文本特征，生成训练集与测试集
-train['text'] = train['title'].fillna('') + ' ' +  train['author'].fillna('') + ' ' + train['abstract'].fillna('')+ ' ' + train['Keywords'].fillna('')
-test['text'] = test['title'].fillna('') + ' ' +  test['author'].fillna('') + ' ' + test['abstract'].fillna('')+ ' ' + train['Keywords'].fillna('')
+train['text'] = train['title'].fillna('') + ' ' +  train['author'].fillna('') + ' ' + train['abstract'].fillna('')+' ' + train['Keywords'].fillna('')
+test['text'] = test['title'].fillna('') + ' ' +  test['author'].fillna('') + ' ' + test['abstract'].fillna('')
 
 vector = CountVectorizer().fit(train['text'])
 train_vector = vector.transform(train['text'])
@@ -36,7 +45,7 @@ test_vector = vector.transform(test['text'])
 
 
 # 引入模型
-model = LogisticRegression()
+model = LogisticRegression(**param_dist)
 
 # 开始训练，这里可以考虑修改默认的batch_size与epoch来取得更好的效果
 model.fit(train_vector, train['label'])
@@ -45,32 +54,11 @@ model.fit(train_vector, train['label'])
 test['label'] = model.predict(test_vector)
 
 # 生成任务一推测结果
-test[['uuid', 'Keywords', 'label']].to_csv('submit_task1.csv', index=None)
-
+test[['uuid', 'label']].to_csv('submit_task1.csv', index=None)
 
 
 # 定义停用词，去掉出现较多，但对文章不关键的词语
-stops = [
-    'will', 'can', "couldn't", 'same', 'own', "needn't", 'between', "shan't", 'very',
-    'so', 'over', 'in', 'have', 'the', 's', 'didn', 'few', 'should', 'of', 'that',
-    'don', 'weren', 'into', "mustn't", 'other', 'from', "she's", 'hasn', "you're",
-    'ain', 'ours', 'them', 'he', 'hers', 'up', 'below', 'won', 'out', 'through',
-    'than', 'this', 'who', "you've", 'on', 'how', 'more', 'being', 'any', 'no',
-    'mightn', 'for', 'again', 'nor', 'there', 'him', 'was', 'y', 'too', 'now',
-    'whom', 'an', 've', 'or', 'itself', 'is', 'all', "hasn't", 'been', 'themselves',
-    'wouldn', 'its', 'had', "should've", 'it', "you'll", 'are', 'be', 'when', "hadn't",
-    "that'll", 'what', 'while', 'above', 'such', 'we', 't', 'my', 'd', 'i', 'me',
-    'at', 'after', 'am', 'against', 'further', 'just', 'isn', 'haven', 'down',
-    "isn't", "wouldn't", 'some', "didn't", 'ourselves', 'their', 'theirs', 'both',
-    're', 'her', 'ma', 'before', "don't", 'having', 'where', 'shouldn', 'under',
-    'if', 'as', 'myself', 'needn', 'these', 'you', 'with', 'yourself', 'those',
-    'each', 'herself', 'off', 'to', 'not', 'm', "it's", 'does', "weren't", "aren't",
-    'were', 'aren', 'by', 'doesn', 'himself', 'wasn', "you'd", 'once', 'because', 'yours',
-    'has', "mightn't", 'they', 'll', "haven't", 'but', 'couldn', 'a', 'do', 'hadn',
-    "doesn't", 'your', 'she', 'yourselves', 'o', 'our', 'here', 'and', 'his', 'most',
-    'about', 'shan', "wasn't", 'then', 'only', 'mustn', 'doing', 'during', 'why',
-    "won't", 'until', 'did', "shouldn't", 'which'
-]
+stops = set(stopwords.words())
 
 
 # 定义方法按照词频筛选关键词
