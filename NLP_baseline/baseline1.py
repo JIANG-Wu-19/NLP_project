@@ -22,7 +22,7 @@ test = pd.read_csv('test.csv')
 test['title'] = test['title'].fillna('')
 test['abstract'] = test['abstract'].fillna('')
 
-param_dist = {
+param_dict = {
     'C': 2.8496190796154743,       # LogisticRegression的惩罚参数C在0.1~10之间均匀分布
     'penalty': 'l2',     # 正则化类型：L1正则化或L2正则化
     'max_iter': 3000  # 最大迭代次数
@@ -39,7 +39,7 @@ test_vector = vector.transform(test['text'])
 
 
 # 引入模型
-model = LogisticRegression(**param_dist)
+model = LogisticRegression(**param_dict)
 
 # 开始训练，这里可以考虑修改默认的batch_size与epoch来取得更好的效果
 model.fit(train_vector, train['label'])
