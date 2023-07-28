@@ -16,9 +16,11 @@ This is my first NLP project,using python.
 
   SOLUTION: Run the project on Ali Cloud(not success yet)<---*It's still a good solution*
 
-  **However,this project has run for 26 epochs before I stopped the interpreter and the score was unsatisfactory.**<---*maybe overfitting*
+  ~~**However,this project has run for 26 epochs before I stopped the interpreter and the score was unsatisfactory**~~.<---*maybe overfitting*
   
-  Set the epoch=10,and the model works well,accuracy reaching 0.9850.
+  Set the epoch=10,and the model works well,accuracy reaching 0.9850.<---*for task 1*
+  
+  The latest version of `NLP_upper` is a **complete version**. It uses the BERT model to solve **two tasks** compared with **only one** in last version. The result is quite good but a bit late :).
   
 * `NLP_chatGLM` is the project using the LLM,leveraging chatGLM in the case of the stability of the connection. However,**using API may casuse the problem that the input including sensitive words stops the program**,emphasizing the essence of training the LLM locally.
 

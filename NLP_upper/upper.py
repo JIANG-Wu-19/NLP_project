@@ -10,12 +10,14 @@ from transformers import AutoTokenizer
 from transformers import BertModel
 from pathlib import Path
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
 # 引入分词器
 from nltk import word_tokenize, ngrams
 
 from nltk.corpus import stopwords
-
-
 
 batch_size = 10
 # 文本的最大长度
@@ -213,38 +215,38 @@ step = 0
 best_accuracy = 0
 
 # 开始训练
-for epoch in range(epochs):
-    model.train()
-    for i, (inputs, targets) in enumerate(train_loader):
-        # 从batch中拿到训练数据
-        inputs, targets = to_device(inputs), targets.to(device)
-        # 传入模型进行前向传递
-        outputs = model(inputs)
-        # 计算损失
-        loss = criteria(outputs.view(-1), targets.float())
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        total_loss += float(loss)
-        step += 1
-
-        if step % log_per_step == 0:
-            print("Epoch {}/{}, Step: {}/{}, total loss:{:.4f}".format(epoch + 1, epochs, i, len(train_loader),
-                                                                       total_loss))
-            total_loss = 0
-
-        del inputs, targets
-
-    # 一个epoch后，使用过验证集进行验证
-    accuracy, validation_loss = validate()
-    print("Epoch {}, accuracy: {:.4f}, validation loss: {:.4f}".format(epoch + 1, accuracy, validation_loss))
-    torch.save(model, model_dir / f"model_{epoch}.pt")
-
-    # 保存最好的模型
-    if accuracy > best_accuracy:
-        torch.save(model, model_dir / f"model_best.pt")
-        best_accuracy = accuracy
+# for epoch in range(epochs):
+#     model.train()
+#     for i, (inputs, targets) in enumerate(train_loader):
+#         # 从batch中拿到训练数据
+#         inputs, targets = to_device(inputs), targets.to(device)
+#         # 传入模型进行前向传递
+#         outputs = model(inputs)
+#         # 计算损失
+#         loss = criteria(outputs.view(-1), targets.float())
+#         loss.backward()
+#         optimizer.step()
+#         optimizer.zero_grad()
+#
+#         total_loss += float(loss)
+#         step += 1
+#
+#         if step % log_per_step == 0:
+#             print("Epoch {}/{}, Step: {}/{}, total loss:{:.4f}".format(epoch + 1, epochs, i, len(train_loader),
+#                                                                        total_loss))
+#             total_loss = 0
+#
+#         del inputs, targets
+#
+#     # 一个epoch后，使用过验证集进行验证
+#     accuracy, validation_loss = validate()
+#     print("Epoch {}, accuracy: {:.4f}, validation loss: {:.4f}".format(epoch + 1, accuracy, validation_loss))
+#     torch.save(model, model_dir / f"model_{epoch}.pt")
+#
+#     # 保存最好的模型
+#     if accuracy > best_accuracy:
+#         torch.save(model, model_dir / f"model_best.pt")
+#         best_accuracy = accuracy
 
 # 加载最好的模型，然后进行测试集的预测
 model = torch.load(model_dir / f"model_best.pt")
@@ -263,41 +265,37 @@ for inputs, ids in test_loader:
 test_label = [pair[1] for pair in results]
 test_data['label'] = test_label
 
-# 定义停用词，去掉出现较多，但对文章不关键的词语
-stops = set(stopwords.words())
+test_data['text'] = test_data['title'].fillna('') + ' ' + test_data['author'].fillna('') + ' ' + test_data[
+    'abstract'].fillna('')
 
+stops= stopwords.words('english')
 
-# 定义方法按照词频筛选关键词
+model=SentenceTransformer(r'xlm-r-distilroberta-base-paraphrase-v1')
 
-def extract_keywords_by_freq(title, abstract):
-    ngrams_count = list(ngrams(word_tokenize(title.lower()), 2)) + list(ngrams(word_tokenize(abstract.lower()), 2))
-    ngrams_count = pd.DataFrame(ngrams_count)
-    ngrams_count = ngrams_count[~ngrams_count[0].isin(stops)]
-    ngrams_count = ngrams_count[~ngrams_count[1].isin(stops)]
-    ngrams_count = ngrams_count[ngrams_count[0].apply(len) > 3]
-    ngrams_count = ngrams_count[ngrams_count[1].apply(len) > 3]
-    ngrams_count['phrase'] = ngrams_count[0] + ' ' + ngrams_count[1]
-    ngrams_count = ngrams_count['phrase'].value_counts()
-    ngrams_count = ngrams_count[ngrams_count > 1]
-    return list(ngrams_count.index)[:6]
-
-
-## 对测试集提取关键词
-
-test_words = []
+test_words=[]
 for row in test_data.iterrows():
     # 读取第每一行数据的标题与摘要并提取关键词
-    prediction_keywords = extract_keywords_by_freq(row[1].title, row[1].abstract)
+    # 修改n_gram_range来改变结果候选词的词长大小。例如，如果我们将它设置为(3，3)，那么产生的候选词将是包含3个关键词的短语。
+    n_gram_range = (2, 2)
+    # 这里我们使用TF-IDF算法来获取候选关键词
+    count = TfidfVectorizer(ngram_range=n_gram_range, stop_words=stops).fit([row[1].text])
+    candidates = count.get_feature_names_out()
+    # 将文本标题以及候选关键词/关键短语转换为数值型数据（numerical data）。我们使用BERT来实现这一目的
+    title_embedding = model.encode([row[1].title])
+
+    candidate_embeddings = model.encode(candidates)
+
+    # 通过修改这个参数来更改关键词数量
+    top_n = 15
     # 利用文章标题进一步提取关键词
-    prediction_keywords = [x.title() for x in prediction_keywords]
-    # 如果未能提取到关键词
-    if len(prediction_keywords) == 0:
-        prediction_keywords = ['A', 'B']
-    test_words.append('; '.join(prediction_keywords))
+    distances = cosine_similarity(title_embedding, candidate_embeddings)
+    keywords = [candidates[index] for index in distances.argsort()[0][-top_n:]]
+
+    if len(keywords) == 0:
+        keywords = ['A', 'B']
+    test_words.append('; '.join(keywords))
+
+    print(f'success {row}')
 
 test_data['Keywords'] = test_words
-test_data[['uuid', 'Keywords', 'label']].to_csv('submit_task2.csv', index=None)
-
-
-
-
+test_data[['uuid','Keywords','label']].to_csv('result.csv',index=False)
